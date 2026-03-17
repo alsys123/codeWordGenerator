@@ -1,0 +1,191 @@
+#..#...#...#..
+...#...#...#..
+...#...#...#..
+#..#...#...#..
+...#...#...#..
+...#...#...#..
+#..#...#...#..
+...#...#...#..
+...#...#...#..
+#..#...#...#..
+...#...#...#..
+...#...#...#..
+#..#...#...#..
+
+def load_template(path: str):
+    grid = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            row = [c for c in line.strip()]
+            if row:
+                grid.append(row)
+    return grid  # list[list[str]]
+
+from dataclasses import dataclass
+
+@dataclass
+class Slot:
+    id: int
+    direction: str  # "A" or "D"
+    row: int
+    col: int
+    length: int
+    cells: list[tuple[int, int]]  # (r, c)
+
+def find_slots(grid):
+    h, w = len(grid), len(grid[0])
+    slots = []
+    slot_id = 1
+
+    # Across
+    for r in range(h):
+        c = 0
+        while c < w:
+            while c < w and grid[r][c] == '#':
+                c += 1
+            start = c
+            while c < w and grid[r][c] != '#':
+                c += 1
+            length = c - start
+            if length >= 2:
+                cells = [(r, cc) for cc in range(start, c)]
+                slots.append(Slot(slot_id, "A", r, start, length, cells))
+                slot_id += 1
+
+    # Down
+    for c in range(w):
+        r = 0
+        while r < h:
+            while r < h and grid[r][c] == '#':
+                r += 1
+            start = r
+            while r < h and grid[r][c] != '#':
+                r += 1
+            length = r - start
+            if length >= 2:
+                cells = [(rr, c) for rr in range(start, r)]
+                slots.append(Slot(slot_id, "D", start, c, length, cells))
+                slot_id += 1
+
+    return slots
+
+from collections import defaultdict
+
+def load_wordlist(path: str):
+    by_len = defaultdict(list)
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            w = line.strip().upper()
+            if w.isalpha():
+                by_len[len(w)].append(w)
+    return by_len  # dict[length] -> list[str]
+
+import random
+
+def init_letter_grid(template):
+    h, w = len(template), len(template[0])
+    g = []
+    for r in range(h):
+        row = []
+        for c in range(w):
+            if template[r][c] == '#':
+                row.append('#')
+            else:
+                row.append(None)
+        g.append(row)
+    return g
+
+def fits(word, slot, letter_grid):
+    for (i, (r, c)) in enumerate(slot.cells):
+        ch = letter_grid[r][c]
+        if ch is not None and ch != word[i]:
+            return False
+    return True
+
+def place(word, slot, letter_grid):
+    for (i, (r, c)) in enumerate(slot.cells):
+        letter_grid[r][c] = word[i]
+
+def unplace(word, slot, letter_grid):
+    for (i, (r, c)) in enumerate(slot.cells):
+        # Only clear if this cell is not forced by another slot.
+        # Simple version: just set to None and rely on backtracking.
+        # For a robust engine, track reference counts per cell.
+        letter_grid[r][c] = None
+
+def solve(slots, wordlist_by_len, letter_grid, idx=0, assignment=None):
+    if assignment is None:
+        assignment = {}
+
+    if idx == len(slots):
+        return assignment
+
+    slot = slots[idx]
+    candidates = wordlist_by_len.get(slot.length, [])
+    random.shuffle(candidates)
+
+    for w in candidates:
+        if fits(w, slot, letter_grid):
+            place(w, slot, letter_grid)
+            assignment[slot.id] = w
+            res = solve(slots, wordlist_by_len, letter_grid, idx + 1, assignment)
+            if res is not None:
+                return res
+            unplace(w, slot, letter_grid)
+            del assignment[slot.id]
+
+    return None
+
+def build_letter_number_mapping(letter_grid):
+    letters = sorted({ch for row in letter_grid for ch in row if ch not in (None, '#')})
+    # You can randomize or use a fixed mapping
+    random.shuffle(letters)
+    mapping = {}
+    num = 1
+    for ch in letters:
+        mapping[ch] = num
+        num += 1
+    return mapping  # dict[letter] -> number
+
+def encode_grid(letter_grid, mapping):
+    h, w = len(letter_grid), len(letter_grid[0])
+    encoded = []
+    for r in range(h):
+        row = []
+        for c in range(w):
+            ch = letter_grid[r][c]
+            if ch == '#':
+                row.append('#')
+            else:
+                row.append(str(mapping[ch]))
+        encoded.append(row)
+    return encoded
+
+def main():
+    template = load_template("grid.txt")
+    slots = find_slots(template)
+    wordlist_by_len = load_wordlist("words.txt")
+    letter_grid = init_letter_grid(template)
+
+    solution = solve(slots, wordlist_by_len, letter_grid)
+    if solution is None:
+        print("No fill found.")
+        return
+
+    mapping = build_letter_number_mapping(letter_grid)
+    encoded = encode_grid(letter_grid, mapping)
+
+    print("Solved letter grid:")
+    for row in letter_grid:
+        print("".join(ch if ch is not None else "." for ch in row))
+
+    print("\nCodeword grid (numbers):")
+    for row in encoded:
+        print(" ".join(row))
+
+    print("\nLetter→number mapping:")
+    for ch, num in sorted(mapping.items(), key=lambda x: x[1]):
+        print(f"{num:2d}: {ch}")
+
+if __name__ == "__main__":
+    main()
