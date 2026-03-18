@@ -1,16 +1,41 @@
-#..#...#...#..
-...#...#...#..
-...#...#...#..
-#..#...#...#..
-...#...#...#..
-...#...#...#..
-#..#...#...#..
-...#...#...#..
-...#...#...#..
-#..#...#...#..
-...#...#...#..
-...#...#...#..
-#..#...#...#..
+#!/usr/bin/env python3
+
+
+##..#...#...#..
+#...#...#...#..
+#...#...#...#..
+##..#...#...#..
+#...#...#...#..
+#...#...#...#..
+##..#...#...#..
+#...#...#...#..
+#...#...#...#..
+##..#...#...#..
+#...#...#...#..
+#...#...#...#..
+##..#...#...#..
+
+grid = [
+  [0,0,0,0,0,1,0,0,0,0,0,0,0],
+  [0,1,0,1,0,0,0,1,0,1,0,1,0],
+  [0,0,0,0,0,0,0,1,0,0,0,0,0],
+  [0,1,0,1,0,1,0,1,0,1,0,1,1],
+  [0,0,0,1,0,0,0,0,0,0,0,0,0],
+  [0,1,0,1,1,1,0,1,0,1,1,1,0],
+  [0,0,0,0,0,0,1,0,0,0,0,0,0],
+  [0,1,1,1,0,1,0,1,1,1,0,1,0],
+  [0,0,0,0,0,0,0,0,1,1,0,0,0],
+  [1,1,0,1,0,1,0,0,0,1,0,1,0],
+  [0,0,0,0,0,1,0,1,0,0,0,1,0],
+  [0,1,0,1,0,1,0,1,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,0,0,0,0,0]
+]
+
+def convert_numeric_template(num_grid):
+    return [
+        ['#' if cell == 1 else '.' for cell in row]
+        for row in num_grid
+    ]
 
 def load_template(path: str):
     grid = []
@@ -158,34 +183,47 @@ def encode_grid(letter_grid, mapping):
                 row.append('#')
             else:
                 row.append(str(mapping[ch]))
-        encoded.append(row)
-    return encoded
-
+                encoded.append(row)
+                return encoded
+            
 def main():
-    template = load_template("grid.txt")
+    print("\nStarting...")
+    template = convert_numeric_template(grid)
+    print("\n")
+    print("\nGot template")
+    #    template = load_template("grid.txt")
     slots = find_slots(template)
+    print("\nFound Slots")
     wordlist_by_len = load_wordlist("words.txt")
+    print("\nLoaded word list")
     letter_grid = init_letter_grid(template)
-
+    print("\nInitialized letter grid.")
+    print("\nSolving...")
     solution = solve(slots, wordlist_by_len, letter_grid)
+    print("\nSolve Complete.")
+
     if solution is None:
         print("No fill found.")
         return
-
+    
     mapping = build_letter_number_mapping(letter_grid)
     encoded = encode_grid(letter_grid, mapping)
-
+    
     print("Solved letter grid:")
     for row in letter_grid:
         print("".join(ch if ch is not None else "." for ch in row))
-
-    print("\nCodeword grid (numbers):")
-    for row in encoded:
-        print(" ".join(row))
-
-    print("\nLetter→number mapping:")
-    for ch, num in sorted(mapping.items(), key=lambda x: x[1]):
-        print(f"{num:2d}: {ch}")
-
+        
+        print("\nCodeword grid (numbers):")
+        for row in encoded:
+            print(" ".join(row))
+            
+            print("\nLetter→number mapping:")
+            for ch, num in sorted(mapping.items(), key=lambda x: x[1]):
+                print(f"{num:2d}: {ch}")
+                
+                
 if __name__ == "__main__":
     main()
+                    
+                    
+                    
