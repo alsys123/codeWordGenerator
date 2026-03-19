@@ -1,54 +1,4 @@
 # UTILS.py
-import argparse
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Codeword generator and solver"
-    )
-
-    parser.add_argument(
-        "--genGrid",
-        action="store_true",
-        help="Print the converted grid and exit"
-    )
-
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable verbose solver debugging"
-    )
-
-    parser.add_argument(
-        "--slot",
-        type=int,
-        help="Inspect a specific slot by ID and exit"
-    )
-
-    parser.add_argument(
-        "--printSlotGrid",
-        action="store_true",
-        help="Print a visual grid showing slot start positions and exit"
-    )
-
-    parser.add_argument(
-        "--slotSummary",
-        action="store_true",
-        help="Print a summary of all slots and exit"
-    )
-
-    parser.add_argument(
-        "--prefill",
-        action="append",
-        help="Prefill a word into a specific slot, e.g. --prefill 12=HELLO"
-    )
-
-    parser.add_argument(
-        "--printSlotGridV2",
-        action="store_true",
-        help="Print a visual grid showing slot paths and exit"
-    )
-
-    return parser.parse_args()
 
 
 def print_slot_grid(template, slots):
@@ -94,19 +44,19 @@ def inspect_slot(slots, wordlist_by_len, slot_id):
         return
 
     print(f"\nSlot {slot.id} details:")
-    print(f"  Direction: {slot.direction}")
-    print(f"  Start:     ({slot.row}, {slot.col})")
-    print(f"  Length:    {slot.length}")
-    print(f"  Cells:     {slot.cells}")
+    print(f"  Direction:     {slot.direction}")
+    print(f"  Start(0 base): ({slot.row}, {slot.col})")
+    print(f"  Length:        {slot.length}")
+    print(f"  Cells:         {slot.cells}")
 
     # Candidate words for this slot length
     candidates = wordlist_by_len.get(slot.length, [])
     print(f"\nCandidate words of length {slot.length}: {len(candidates)}")
 
     # Print a reasonable preview
-    for w in candidates[:50]:
+    for w in candidates[:10]:
         print(" ", w)
-    if len(candidates) > 50:
+    if len(candidates) > 10:
         print("  ...")
 
 def prefill_word(letter_grid, slot, word):
@@ -164,3 +114,9 @@ def print_slot_grid_v2(template, slots):
             else:
                 row += f"{''.join(cell):<5}"
         print(row)
+
+def print_partial_grid(letter_grid):
+    print("\nCurrent Partial Grid:")
+    for row in letter_grid:
+        print("".join(ch if ch else "." for ch in row))
+    print()

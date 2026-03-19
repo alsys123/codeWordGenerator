@@ -2,7 +2,9 @@
 
 #from utils import print_slot_grid, print_slot_summary,inspect_slot
 from utils import *
+
 # or import utils ... and use like utils.print_slot_summary
+import argDef  
 
 ##..#...#...#..
 #...#...#...#..
@@ -160,31 +162,38 @@ def unplace(word, slot, letter_grid):
 def solve(slots, wordlist_by_len, letter_grid, idx=0, assignment=None):
     if assignment is None:
         assignment = {}
-        
-    print(f"Try1 slot {idx+1}/{len(slots)} (length {slots[idx].length})")
+
+    # Base case: all slots filled
     if idx == len(slots):
         return assignment
 
     slot = slots[idx]
+    print(f"\n=== Try slotIndex {idx+1}/{len(slots)} → slotID={slot.id} length={slot.length} ===")
+#    print_partial_grid(letter_grid)
+
+    # Get candidates
     candidates = wordlist_by_len.get(slot.length, [])
     random.shuffle(candidates)
 
-#    print(f"Try3 → Slot {idx+1}/{len(slots)}  ID={slot.id}  "
-#      f"{slot.direction} ({slot.row},{slot.col})  len={slot.length}  "
-#      f"candidates={len(candidates)}")
-
     for w in candidates:
-#        print(f"   Try2 {w} for slot {slot.id}")
         if fits(w, slot, letter_grid):
+            print(f"Placing {w} into slot {slot.id}")
             place(w, slot, letter_grid)
+            print_partial_grid(letter_grid)
+
             assignment[slot.id] = w
             res = solve(slots, wordlist_by_len, letter_grid, idx + 1, assignment)
             if res is not None:
                 return res
+
+            print(f"Backtracking {w} from slot {slot.id}")
             unplace(w, slot, letter_grid)
+            print_partial_grid(letter_grid)
+
             del assignment[slot.id]
 
     return None
+
 
 def build_letter_number_mapping(letter_grid):
     letters = sorted({ch for row in letter_grid for ch in row if ch not in (None, '#')})
@@ -213,7 +222,7 @@ def encode_grid(letter_grid, mapping):
 
 
 def main():
-    args = parse_args()
+    args = argDef.parse_args()
 
     print("\nStarting...")
 
