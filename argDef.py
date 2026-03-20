@@ -54,3 +54,24 @@ def parse_args():
     )
 
     return parser.parse_args()
+
+# argActions.py
+
+def handle_pre_solve_args(args, template, slots, wordlist_by_len):
+    if args.printSlotGrid:
+        print_slot_grid(template, slots)
+        return True
+
+    if args.printSlotGridV2:
+        print_slot_grid_v2(template, slots)
+        return True
+
+    if args.slot:
+        inspect_slot(slots, wordlist_by_len, args.slot)
+        return True
+
+    if args.slotSummary:
+        print_slot_summary(slots)
+        return True
+
+    return False
