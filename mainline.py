@@ -51,6 +51,7 @@ grid = [
 #   [0,0,0,0,0,0,0,1,0,0,0,0,0]
 # ]
 
+RARE_LETTERS = set("JQXZKVWY")
 
 def convert_numeric_template(num_grid):
     return [
@@ -299,14 +300,27 @@ def choose_next_slot(slots, letter_grid, wordlist_by_len, assignment):
 
     return best
 
+def get_used_letters(letter_grid):
+    return {
+        ch for row in letter_grid for ch in row
+        if ch not in (None, "#")
+    }
 
 def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
     if assignment is None:
         assignment = {}
 
     # All slots filled
+#    if len(assignment) == len(slots):
+#        return assignment
+
     if len(assignment) == len(slots):
-        return assignment
+    # Final constraint: must use all 26 letters
+        if puzzle_uses_all_letters(letter_grid):
+            return assignment
+        else:
+            # Reject this solution and force backtracking
+            return None
 
     # Pick next slot dynamically (MRV)
     slot = choose_next_slot(slots, letter_grid, wordlist_by_len, assignment)
@@ -316,6 +330,33 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
     # Get filtered candidates
     candidates = candidates_for_slot(slot, letter_grid, wordlist_by_len)
 
+    # ---------------------------------------------------------
+    # RARE LETTER HEURISTIC (conditional, keeps randomness)
+    # ---------------------------------------------------------
+    
+    used = get_used_letters(letter_grid)
+    missing_rare = RARE_LETTERS - used
+    
+    progress = len(assignment) / len(slots)
+    
+    # Activate heuristic only after 40% of puzzle is filled
+    if progress > 0.40 and missing_rare:
+        # Filter candidates that contain ANY missing rare letter
+        filtered = [w for w in candidates if set(w) & missing_rare]
+        
+        if filtered:
+            # Keep randomness but bias toward rare-letter words
+            random.shuffle(filtered)
+            candidates = filtered
+        else:
+            # No rare-letter words available — keep original list
+            random.shuffle(candidates)
+    else:
+        # Early in puzzle: pure randomness
+        random.shuffle(candidates)
+
+    # end of RARE letter
+        
     print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
           f"candidates={len(candidates)} ===")
 
@@ -375,6 +416,58 @@ def encode_grid(letter_grid, mapping):
     return encoded
 
 
+def print_js_puzzle(puzzle_id, letter_grid, mapping, hints=None):
+    print(f"  {puzzle_id}: {{")
+    print("    grid: [")
+
+    # Convert letter grid → numeric grid
+    encoded = encoded_grid_2(letter_grid, mapping)
+
+    # Print grid rows
+    for row in encoded:
+        nums = []
+        for x in row:
+            if x == "#" or x is None:
+                nums.append("0")
+            else:
+                nums.append(str(int(x)))
+        print(f"      [ {', '.join(nums)} ],")
+
+    print("    ],\n")
+
+    # Print solution block
+    print("    solution: {")
+    inv = {v: k for k, v in mapping.items()}  # number → letter
+    for num in range(1, 27):
+        letter = inv.get(num, "?")
+        print(f"      {num}:\"{letter}\",")
+    print("    },\n")
+
+    # Print hints block
+    print("    hints: [")
+    if hints:
+        for h in hints:
+            print(f"      {{ number: {h['number']}, letter: \"{h['letter']}\" }},")
+    print("    ]")
+
+    print("  },")
+
+def encoded_grid_2(letter_grid, mapping):
+    encoded = []
+    for row in letter_grid:
+        out_row = []
+        for ch in row:
+            if ch is None or ch == "#":
+                out_row.append(0)
+            else:
+                out_row.append(mapping[ch])
+        encoded.append(out_row)
+    return encoded
+
+def puzzle_uses_all_letters(letter_grid):
+    letters = {ch for row in letter_grid for ch in row if ch not in (None, "#")}
+    return len(letters) == 26
+
 def main():
     args = argDef.parse_args()
 
@@ -413,9 +506,38 @@ def main():
             slot_id = int(slot_id)
             slot = next(s for s in slots if s.id == slot_id)
             prefill_word(letter_grid, slot, word.upper())
-            
+
+# # ⭐⭐⭐ INSERT RETRY LOOP HERE ⭐⭐⭐
+#     print("\nSolving...")
+
+#     while True:
+#         # fresh grid each attempt
+#         letter_grid = init_letter_grid(template)
+
+#         # apply prefill again if needed
+#         if args.prefill:
+#             for item in args.prefill:
+#                 slot_id, word = item.split("=")
+#                 slot_id = int(slot_id)
+#                 slot = next(s for s in slots if s.id == slot_id)
+#                 prefill_word(letter_grid, slot, word.upper())
+
+#         solution = solve(slots, wordlist_by_len, letter_grid)
+
+#         if solution is None:
+#             print("No fill found — retrying...\n")
+#             continue
+
+#         if puzzle_uses_all_letters(letter_grid):
+#             print("Puzzle uses all 26 letters — accepted.")
+#             break
+
+#         print("Puzzle missing letters — retrying...\n")
+# # ⭐⭐⭐ END RETRY LOOP ⭐⭐⭐
+
     print("\nSolving...")
     solution = solve(slots, wordlist_by_len, letter_grid)
+
     print("\nSolve Complete.")
 
     if solution is None:
@@ -437,7 +559,14 @@ def main():
     for ch, num in sorted(mapping.items(), key=lambda x: x[1]):
         print(f"{num:2d}: {ch}")
 
-                
+    print("\nJS Puzzle Output:\n")
+    print_js_puzzle(
+        1,
+        letter_grid,
+        mapping,
+        hints=[{"number":5,"letter":"Q"}, {"number":23,"letter":"Z"}]
+    )
+
                 
 if __name__ == "__main__":
     main()
