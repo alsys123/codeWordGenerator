@@ -1,0 +1,16 @@
+
+looking for word including escapes
+$ grep -n '^abb' words.txt | sed -n 'l' |
+
+165:abbas\r$
+166:abbasi\r$
+167:abbasid\r$
+
+grep -n '^abb\r$' words.txt                 
+158:abb
+
+.. get rid of 'R' - return only and create unix \n style endinds
+$ tr -d '\r' < words.txt > words_unix.txt
+
+.. now remove words:
+sed -i '.bak' '/^abb\r$/d' words.txt
