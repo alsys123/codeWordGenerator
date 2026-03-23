@@ -53,6 +53,24 @@ def parse_args():
         help="Print a visual grid showing slot paths and exit"
     )
 
+    parser.add_argument(
+        "--pickTemplate",
+        type=int,
+        help="Choose a specific template number instead of random. E.g. 1 .. 7"
+    )
+
+    parser.add_argument(
+        "--listTemplates",
+        action="store_true",
+        help="List all available puzzle templates and exit"
+    )
+
+    parser.add_argument(
+        "--showTemplate",
+        type=int,
+        help="Display the specified template and exit"
+    )
+    
     return parser.parse_args()
 
 # argActions.py

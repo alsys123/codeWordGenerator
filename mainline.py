@@ -5,53 +5,69 @@ from utils import *
 
 # or import utils ... and use like utils.print_slot_summary
 import argDef  
+import gridData
+import printDef
+import analyze
 
-##..#...#...#..
-#...#...#...#..
-#...#...#...#..
-##..#...#...#..
-#...#...#...#..
-#...#...#...#..
-##..#...#...#..
-#...#...#...#..
-#...#...#...#..
-##..#...#...#..
-#...#...#...#..
-#...#...#...#..
-##..#...#...#..
-grid = [
-[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-[1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
-[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-[1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
-[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0]
-]
+import os
 
 # grid = [
-#   [0,0,0,0,0,1,0,0,0,0,0,0,0],
-#   [0,1,0,1,0,0,0,1,0,1,0,1,0],
-#   [0,0,0,0,0,0,0,1,0,0,0,0,0],
-#   [0,1,0,1,0,1,0,1,0,1,0,1,1],
-#   [0,0,0,1,0,0,0,0,0,0,0,0,0],
-#   [0,1,0,1,1,1,0,1,0,1,1,1,0],
-#   [0,0,0,0,0,0,1,0,0,0,0,0,0],
-#   [0,1,1,1,0,1,0,1,1,1,0,1,0],
-#   [0,0,0,0,0,0,0,0,1,1,0,0,0],
-#   [1,1,0,1,0,1,0,0,0,1,0,1,0],
-#   [0,0,0,0,0,1,0,1,0,0,0,1,0],
-#   [0,1,0,1,0,1,0,1,0,0,0,0,0],
-#   [0,0,0,0,0,0,0,1,0,0,0,0,0]
+# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+# [1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
+# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+# [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+# [1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
+# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0]
 # ]
 
+
 RARE_LETTERS = set("JQXZKVWY")
+Hint_LETTERS = set("JQXZKVWYTN")
+
+#  ***** Words used section
+WORDS_USED_FILE = "wordsUsed.txt"
+words_used_global = set()
+
+def load_words_used():
+    if not os.path.exists(WORDS_USED_FILE):
+        return set()
+
+    words = set()
+    with open(WORDS_USED_FILE, "r") as f:
+        for line in f:
+            w = line.strip().upper()
+            if w:
+                words.add(w)
+    return words
+
+def save_words_used(words_used):
+    with open(WORDS_USED_FILE, "w") as f:
+        for w in sorted(words_used):
+            f.write(w + "\n")
+
+
+def extract_words_from_solution(slots, letter_grid):
+    words = []
+    for slot in slots:
+        r, c = slot.row, slot.col
+        word = ""
+        for i in range(slot.length):
+            word += letter_grid[r][c]
+            if slot.direction == "A":
+                c += 1
+            else:
+                r += 1
+        words.append(word.upper())
+    return words
+
+# *** end of words used
 
 def convert_numeric_template(num_grid):
     return [
@@ -126,6 +142,7 @@ def load_wordlist(path: str):
             if w.isalpha():
                 by_len[len(w)].append(w)
     return by_len  # dict[length] -> list[str]
+
 
 import random
 
@@ -262,6 +279,10 @@ def candidates_for_slot(slot, letter_grid, wordlist_by_len):
     """Filter wordlist by length and pattern."""
     all_words = wordlist_by_len.get(slot.length, [])
     pat = pattern_for_slot(slot, letter_grid)
+
+    # Remove previously used words
+    filtered = [w for w in all_words if w not in words_used_global]
+    
     return [
         w for w in all_words
         if all(p == "." or p == w[i] for i, p in enumerate(pat))
@@ -473,7 +494,35 @@ def main():
 
     print("\nStarting...")
 
+    if args.listTemplates:
+        print("\nAvailable Templates:\n")
+        for tid, grid in gridData.startingGrids.items():
+            print(f"Template {tid}: {len(grid)} rows × {len(grid[0])} cols")
+        return True
+
+    if args.showTemplate is not None:
+        tid = args.showTemplate
+        if tid not in gridData.startingGrids:
+            print(f"Template {tid} does not exist.")
+            return True
+        
+        grid = gridData.startingGrids[tid]
+        
+        print(f"\nTemplate {tid} ({len(grid)}×{len(grid[0])}):\n")
+        printDef.print_numeric_grid(grid)
+        return True
+
+    
+    # Pick template
+    if args.pickTemplate is not None:
+        template_id = args.pickTemplate
+    else:
+        template_id = random.choice(list(gridData.startingGrids.keys()))
+        
+    grid = gridData.startingGrids[template_id]
     template = convert_numeric_template(grid)
+
+    #   template = convert_numeric_template(grid)
 
     if args.genGrid:
         print("\nConverted grid:")
@@ -484,6 +533,8 @@ def main():
     slots = find_slots(template)
 
     wordlist_by_len = load_wordlist("words.txt")
+    global words_used_global
+    words_used_global = load_words_used()
 
     # MRV sort
     slots.sort(key=lambda s: len(wordlist_by_len.get(s.length, [])))
@@ -559,13 +610,36 @@ def main():
     for ch, num in sorted(mapping.items(), key=lambda x: x[1]):
         print(f"{num:2d}: {ch}")
 
+    hints = analyze.pick_hint_letters(letter_grid, mapping, Hint_LETTERS)
+    
     print("\nJS Puzzle Output:\n")
     print_js_puzzle(
         1,
         letter_grid,
         mapping,
-        hints=[{"number":5,"letter":"Q"}, {"number":23,"letter":"Z"}]
+        hints=hints
     )
+
+    # Extract words used in this puzzle
+    words_this_puzzle = extract_words_from_solution(slots, letter_grid)
+    
+    # Load previous words
+    words_used = load_words_used()
+    
+    # Merge
+    words_used.update(words_this_puzzle)
+    
+    # Save back to file
+    save_words_used(words_used)
+
+    print(f"\nStored {len(words_this_puzzle)} words. Total unique words used: {len(words_used)}")
+    
+#    print_js_puzzle(
+#        1,
+#        letter_grid,
+#        mapping,
+#        hints=[{"number":5,"letter":"Q"}, {"number":23,"letter":"Z"}]
+#    )
 
                 
 if __name__ == "__main__":
