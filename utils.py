@@ -18,6 +18,7 @@ def print_slot_grid(template, slots):
         label[s.row][s.col] = tag
 
     print("\nSlot Grid (slot start positions):")
+
     for r in range(h):
         row_str = ""
         for c in range(w):

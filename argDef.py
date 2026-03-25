@@ -70,7 +70,14 @@ def parse_args():
         type=int,
         help="Display the specified template and exit"
     )
-    
+
+    parser.add_argument(
+        "--gen",
+        nargs=3,
+        metavar=("START", "COUNT", "NAME"),
+        help="Generate multiple puzzles: --gen <start> <count> <name>"
+    )
+
     return parser.parse_args()
 
 # argActions.py

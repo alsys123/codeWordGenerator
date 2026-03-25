@@ -14,3 +14,8 @@ $ tr -d '\r' < words.txt > words_unix.txt
 
 .. now remove words:
 sed -i '.bak' '/^abb\r$/d' words.txt
+
+
+===========
+git clone git@github.com:alsys123/codeWordGenerator.git
+

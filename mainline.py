@@ -10,22 +10,8 @@ import printDef
 import analyze
 
 import os
-
-# grid = [
-# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-# [1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
-# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-# [1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1],
-# [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-# [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0]
-# ]
+import json
+import sys
 
 
 RARE_LETTERS = set("JQXZKVWY")
@@ -437,41 +423,41 @@ def encode_grid(letter_grid, mapping):
     return encoded
 
 
-def print_js_puzzle(puzzle_id, letter_grid, mapping, hints=None):
-    print(f"  {puzzle_id}: {{")
-    print("    grid: [")
+# def print_js_puzzle(puzzle_id, letter_grid, mapping, hints=None):
+#     print(f"  {puzzle_id}: {{")
+#     print("    grid: [")
 
-    # Convert letter grid → numeric grid
-    encoded = encoded_grid_2(letter_grid, mapping)
+#     # Convert letter grid → numeric grid
+#     encoded = encoded_grid_2(letter_grid, mapping)
 
-    # Print grid rows
-    for row in encoded:
-        nums = []
-        for x in row:
-            if x == "#" or x is None:
-                nums.append("0")
-            else:
-                nums.append(str(int(x)))
-        print(f"      [ {', '.join(nums)} ],")
+#     # Print grid rows
+#     for row in encoded:
+#         nums = []
+#         for x in row:
+#             if x == "#" or x is None:
+#                 nums.append("0")
+#             else:
+#                 nums.append(str(int(x)))
+#         print(f"      [ {', '.join(nums)} ],")
 
-    print("    ],\n")
+#     print("    ],\n")
 
-    # Print solution block
-    print("    solution: {")
-    inv = {v: k for k, v in mapping.items()}  # number → letter
-    for num in range(1, 27):
-        letter = inv.get(num, "?")
-        print(f"      {num}:\"{letter}\",")
-    print("    },\n")
+#     # Print solution block
+#     print("    solution: {")
+#     inv = {v: k for k, v in mapping.items()}  # number → letter
+#     for num in range(1, 27):
+#         letter = inv.get(num, "?")
+#         print(f"      {num}:\"{letter}\",")
+#     print("    },\n")
 
-    # Print hints block
-    print("    hints: [")
-    if hints:
-        for h in hints:
-            print(f"      {{ number: {h['number']}, letter: \"{h['letter']}\" }},")
-    print("    ]")
+#     # Print hints block
+#     print("    hints: [")
+#     if hints:
+#         for h in hints:
+#             print(f"      {{ number: {h['number']}, letter: \"{h['letter']}\" }},")
+#     print("    ]")
 
-    print("  },")
+#     print("  },")
 
 def encoded_grid_2(letter_grid, mapping):
     encoded = []
@@ -489,9 +475,69 @@ def puzzle_uses_all_letters(letter_grid):
     letters = {ch for row in letter_grid for ch in row if ch not in (None, "#")}
     return len(letters) == 26
 
+def generate_single_puzzle(template_id=None):
+    # Pick template
+    if template_id is None:
+        template_id = random.choice(list(gridData.startingGrids.keys()))
+
+    grid = gridData.startingGrids[template_id]
+    template = convert_numeric_template(grid)
+
+    slots = find_slots(template)
+    wordlist_by_len = load_wordlist("words.txt")
+
+    letter_grid = init_letter_grid(template)
+    solution = solve(slots, wordlist_by_len, letter_grid)
+
+    if solution is None:
+        return None  # caller can retry
+
+    mapping = build_letter_number_mapping(letter_grid)
+    encoded = encoded_grid_2(letter_grid, mapping)
+    inv = {v: k for k, v in mapping.items()}
+    hints = analyze.pick_hint_letters(letter_grid, mapping, Hint_LETTERS)
+
+    return {
+        "template_id": template_id,
+        "grid": encoded,
+        "solution": {str(num): inv[num] for num in range(1, 27)},
+        "hints": hints
+    }
+
+def generate_multiple_puzzles(start, count, name):
+    all_puzzles = {}
+
+    for i in range(count):
+        puzzle_num = start + i
+        print(f"Generating puzzle {puzzle_num}...")
+
+        while True:
+            result = generate_single_puzzle()
+            if result is not None:
+                break
+
+        all_puzzles[str(puzzle_num)] = {
+            "grid": result["grid"],
+            "solution": result["solution"],
+            "hints": result["hints"]
+        }
+
+    filename = f"puzzleData-{name}.json"
+    with open(filename, "w") as f:
+        f.write(printDef.pretty_print_puzzle_json(all_puzzles))
+
+    print(f"\nWrote {count} puzzles to {filename}")
+
 def main():
     args = argDef.parse_args()
 
+    if args.gen:
+        start = int(args.gen[0])
+        count = int(args.gen[1])
+        name = args.gen[2]
+        generate_multiple_puzzles(start, count, name)
+        return
+    
     print("\nStarting...")
 
     if args.listTemplates:
@@ -596,7 +642,7 @@ def main():
         return
 
     mapping = build_letter_number_mapping(letter_grid)
-    encoded = encode_grid(letter_grid, mapping)
+    encoded = encoded_grid_2(letter_grid, mapping)
 
     print("Solved letter grid:")
     for row in letter_grid:
@@ -604,7 +650,8 @@ def main():
 
     print("\nCodeword grid (numbers):")
     for row in encoded:
-        print(" ".join(row))
+#        print(" ".join(row))
+        print(" ".join(str(x) for x in row))
 
     print("\nLetter→number mapping:")
     for ch, num in sorted(mapping.items(), key=lambda x: x[1]):
@@ -612,13 +659,35 @@ def main():
 
     hints = analyze.pick_hint_letters(letter_grid, mapping, Hint_LETTERS)
     
-    print("\nJS Puzzle Output:\n")
-    print_js_puzzle(
-        1,
-        letter_grid,
-        mapping,
-        hints=hints
-    )
+#    print("\nJS Puzzle Output:\n")
+#    print_js_puzzle(
+#        1,
+#        letter_grid,
+#        mapping,
+#        hints=hints
+#    )
+
+    # Build inverse mapping for solution block
+    inv = {v: k for k, v in mapping.items()}
+
+    #two line solution block
+#    solution_pairs = [f"\"{num}\":\"{inv[num]}\"" for num in range(1, 27)]
+#    line1 = ", ".join(solution_pairs[:13])
+#    line2 = ", ".join(solution_pairs[13:])
+#    solution_block = "{\n  " + line1 + ",\n  " + line2 + "\n}"
+
+    # Build JSON structure
+    puzzle_json = {
+        str(template_id): {
+            "grid": encoded,  # numeric grid
+            "solution": {str(num): inv[num] for num in range(1, 27)},
+            "hints": hints
+        }
+    }
+
+    print("\nJSON Puzzle Output:\n")
+    #    print(json.dumps(puzzle_json, indent=2))
+    print(printDef.pretty_print_puzzle_json(puzzle_json))
 
     # Extract words used in this puzzle
     words_this_puzzle = extract_words_from_solution(slots, letter_grid)
