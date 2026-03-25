@@ -21,6 +21,8 @@ Hint_LETTERS = set("JQXZKVWYTN")
 WORDS_USED_FILE = "wordsUsed.txt"
 words_used_global = set()
 
+DEBUG_SOLVER = False
+
 def load_words_used():
     if not os.path.exists(WORDS_USED_FILE):
         return set()
@@ -363,9 +365,10 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
         random.shuffle(candidates)
 
     # end of RARE letter
-        
-    print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
-          f"candidates={len(candidates)} ===")
+
+    if DEBUG_SOLVER:
+        print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
+              f"candidates={len(candidates)} ===")
 
     for w in candidates:
         # Enforce uniqueness
@@ -375,10 +378,14 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
         if not fits(w, slot, letter_grid):
             continue
 
-        print(f"{'  '*depth}Placing {w} into slot {slot.id}")
+        if DEBUG_SOLVER:
+            print(f"{'  '*depth}Placing {w} into slot {slot.id}")
+            
         place(w, slot, letter_grid)
         assignment[slot.id] = w
-        print_partial_grid(letter_grid)
+
+        if DEBUG_SOLVER:
+            print_partial_grid(letter_grid)
 
         # Forward checking
         if forward_check(slots, letter_grid, wordlist_by_len, assignment):
@@ -387,10 +394,14 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
                 return res
 
         # Backtrack
-        print(f"{'  '*depth}Backtracking {w} from slot {slot.id}")
+        if DEBUG_SOLVER:
+            print(f"{'  '*depth}Backtracking {w} from slot {slot.id}")
+            
         unplace(w, slot, letter_grid)
         del assignment[slot.id]
-        print_partial_grid(letter_grid)
+
+        if DEBUG_SOLVER:
+            print_partial_grid(letter_grid)
 
     return None
 
@@ -486,6 +497,12 @@ def generate_single_puzzle(template_id=None):
     slots = find_slots(template)
     wordlist_by_len = load_wordlist("words.txt")
 
+    global words_used_global
+    words_used_global = load_words_used()
+
+    # MRV sort
+    slots.sort(key=lambda s: len(wordlist_by_len.get(s.length, [])))
+    
     letter_grid = init_letter_grid(template)
     solution = solve(slots, wordlist_by_len, letter_grid)
 
@@ -531,6 +548,9 @@ def generate_multiple_puzzles(start, count, name):
 def main():
     args = argDef.parse_args()
 
+    global DEBUG_SOLVER
+    DEBUG_SOLVER = args.debug
+    
     if args.gen:
         start = int(args.gen[0])
         count = int(args.gen[1])
