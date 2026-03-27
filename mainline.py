@@ -368,7 +368,7 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
 
     if DEBUG_SOLVER:
         print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
-              f"candidates={len(candidates)} ===")
+              f"candidates={len(candidates)} === Depth:{depth}")
 
     for w in candidates:
         # Enforce uniqueness
@@ -379,7 +379,7 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
             continue
 
         if DEBUG_SOLVER:
-            print(f"{'  '*depth}Placing {w} into slot {slot.id}")
+            print(f"{'  '*depth}Placing {w} into slot {slot.id} Depth:{depth}")
             
         place(w, slot, letter_grid)
         assignment[slot.id] = w
@@ -395,7 +395,7 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
 
         # Backtrack
         if DEBUG_SOLVER:
-            print(f"{'  '*depth}Backtracking {w} from slot {slot.id}")
+            print(f"{'  '*depth}Backtracking {w} from slot {slot.id} Depth:{depth}")
             
         unplace(w, slot, letter_grid)
         del assignment[slot.id]
@@ -514,12 +514,29 @@ def generate_single_puzzle(template_id=None):
     inv = {v: k for k, v in mapping.items()}
     hints = analyze.pick_hint_letters(letter_grid, mapping, Hint_LETTERS)
 
+    saveUsedWordsPrep(slots,letter_grid)
+
     return {
         "template_id": template_id,
         "grid": encoded,
         "solution": {str(num): inv[num] for num in range(1, 27)},
         "hints": hints
     }
+
+def saveUsedWordsPrep(slots,letter_grid):
+    # Extract words used in this puzzle
+    words_this_puzzle = extract_words_from_solution(slots, letter_grid)
+    
+    # Load previous words
+    words_used = load_words_used()
+    
+    # Merge
+    words_used.update(words_this_puzzle)
+    
+    # Save back to file
+    save_words_used(words_used)
+
+    return
 
 def generate_multiple_puzzles(start, count, name):
     all_puzzles = {}
@@ -709,6 +726,7 @@ def main():
     #    print(json.dumps(puzzle_json, indent=2))
     print(printDef.pretty_print_puzzle_json(puzzle_json))
 
+    # ** WORDS USED ** START block
     # Extract words used in this puzzle
     words_this_puzzle = extract_words_from_solution(slots, letter_grid)
     
@@ -722,6 +740,7 @@ def main():
     save_words_used(words_used)
 
     print(f"\nStored {len(words_this_puzzle)} words. Total unique words used: {len(words_used)}")
+    # ** WORDS USED ** END block
     
 #    print_js_puzzle(
 #        1,
