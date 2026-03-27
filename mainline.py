@@ -367,8 +367,11 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
     # end of RARE letter
 
     if DEBUG_SOLVER:
-        print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
+        #        print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
+        #              f"candidates={len(candidates)} === Depth:{depth}")
+        print(f"\n=== SlotID {slot.id} len={slot.length} "
               f"candidates={len(candidates)} === Depth:{depth}")
+
 
     for w in candidates:
         # Enforce uniqueness
@@ -379,7 +382,8 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
             continue
 
         if DEBUG_SOLVER:
-            print(f"{'  '*depth}Placing {w} into slot {slot.id} Depth:{depth}")
+            #print(f"{'  '*depth}Placing {w} into slot {slot.id} Depth:{depth}")
+            print(f"Placing {w} into slot {slot.id} Depth:{depth}")
             
         place(w, slot, letter_grid)
         assignment[slot.id] = w
@@ -395,7 +399,8 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
 
         # Backtrack
         if DEBUG_SOLVER:
-            print(f"{'  '*depth}Backtracking {w} from slot {slot.id} Depth:{depth}")
+            #print(f"{'  '*depth}Backtracking {w} from slot {slot.id} Depth:{depth}")
+            print(f"Backtracking {w} from slot {slot.id} Depth:{depth}")
             
         unplace(w, slot, letter_grid)
         del assignment[slot.id]
