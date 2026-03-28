@@ -23,6 +23,9 @@ words_used_global = set()
 
 DEBUG_SOLVER = False
 
+ATTEMPT_LIMIT = 10000   # or whatever you want
+attempt_counter = 0
+
 def load_words_used():
     if not os.path.exists(WORDS_USED_FILE):
         return set()
@@ -316,6 +319,9 @@ def get_used_letters(letter_grid):
     }
 
 def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
+
+    global attempt_counter, ATTEMPT_LIMIT
+    
     if assignment is None:
         assignment = {}
 
@@ -370,7 +376,9 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
         #        print(f"\n{'  '*depth}=== SlotID {slot.id} len={slot.length} "
         #              f"candidates={len(candidates)} === Depth:{depth}")
         print(f"\n=== SlotID {slot.id} len={slot.length} "
-              f"candidates={len(candidates)} === Depth:{depth}")
+              f"candidates={len(candidates)} === Depth:{depth}"
+              f" attempt: {attempt_counter}"
+              )
 
 
     for w in candidates:
@@ -378,6 +386,13 @@ def solve(slots, wordlist_by_len, letter_grid, assignment=None, depth=0):
         if w in assignment.values():
             continue
 
+        # Count every attempted word
+        attempt_counter += 1
+        if attempt_counter > ATTEMPT_LIMIT:
+            if DEBUG_SOLVER:
+                print(f"*** Attempt limit {ATTEMPT_LIMIT} reached — aborting puzzle ***")
+            return None
+    
         if not fits(w, slot, letter_grid):
             continue
 
@@ -509,6 +524,10 @@ def generate_single_puzzle(template_id=None):
     slots.sort(key=lambda s: len(wordlist_by_len.get(s.length, [])))
     
     letter_grid = init_letter_grid(template)
+
+    global attempt_counter
+    attempt_counter = 0
+
     solution = solve(slots, wordlist_by_len, letter_grid)
 
     if solution is None:
