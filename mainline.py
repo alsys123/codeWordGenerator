@@ -580,6 +580,8 @@ def generate_multiple_puzzles(start, count, name):
             "hints": result["hints"]
         }
 
+        print(f"   done.  Word Attempts: {attempt_counter}")
+
     filename = f"puzzleData-{name}.json"
     with open(filename, "w") as f:
         f.write(printDef.pretty_print_puzzle_json(all_puzzles))
